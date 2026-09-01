@@ -1,0 +1,114 @@
+-- FULL DATABASE SCRIPT - RaceEventDB
+-- For SQL Server Management Studio (SSMS)
+
+USE master;
+GO
+IF DB_ID('RaceEventDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE RaceEventDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE RaceEventDB;
+END
+GO
+CREATE DATABASE RaceEventDB;
+GO
+USE RaceEventDB;
+GO
+
+-- 1. USERS
+CREATE TABLE USERS (
+    UserId INT IDENTITY(1,1) PRIMARY KEY,
+    Email NVARCHAR(255) NOT NULL UNIQUE,
+    PasswordHash NVARCHAR(255) NOT NULL,
+    FirstName NVARCHAR(100) NOT NULL,
+    LastName NVARCHAR(100) NOT NULL,
+    Role NVARCHAR(20) CHECK (Role IN ('Organiser','Participant')),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    LastLogin DATETIME
+);
+GO
+
+-- 2. ORGANISERS
+CREATE TABLE ORGANISERS (
+    OrganiserId INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT FOREIGN KEY REFERENCES USERS(UserId),
+    CompanyName NVARCHAR(150),
+    PhoneNumber NVARCHAR(20)
+);
+GO
+
+-- 3. PARTICIPANTS
+CREATE TABLE PARTICIPANTS (
+    ParticipantId INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT FOREIGN KEY REFERENCES USERS(UserId),
+    DateOfBirth DATE,
+    Gender NVARCHAR(10),
+    EmergencyContact NVARCHAR(150)
+);
+GO
+
+-- 4. EVENTS
+CREATE TABLE EVENTS (
+    EventId INT IDENTITY(1,1) PRIMARY KEY,
+    OrganiserId INT FOREIGN KEY REFERENCES ORGANISERS(OrganiserId),
+    EventName NVARCHAR(200) NOT NULL,
+    Description NVARCHAR(500),
+    EventDate DATETIME NOT NULL,
+    Location NVARCHAR(150),
+    Status NVARCHAR(20),
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 5. CATEGORIES
+CREATE TABLE CATEGORIES (
+    CategoryId INT IDENTITY(1,1) PRIMARY KEY,
+    EventId INT FOREIGN KEY REFERENCES EVENTS(EventId),
+    CategoryName NVARCHAR(100) NOT NULL,
+    AgeGroup NVARCHAR(50),
+    GenderRestriction NVARCHAR(20),
+    MaxParticipants INT,
+    EntryFee DECIMAL(6,2)
+);
+GO
+
+-- 6. EVENTENROLMENTS
+CREATE TABLE EVENTENROLMENTS (
+    EnrolmentId INT IDENTITY(1,1) PRIMARY KEY,
+    EventId INT FOREIGN KEY REFERENCES EVENTS(EventId),
+    ParticipantId INT FOREIGN KEY REFERENCES PARTICIPANTS(ParticipantId),
+    CategoryId INT FOREIGN KEY REFERENCES CATEGORIES(CategoryId),
+    RegistrationDate DATETIME DEFAULT GETDATE(),
+    Status NVARCHAR(20),
+    PaymentStatus NVARCHAR(20)
+);
+GO
+
+-- 7. RESULTS
+CREATE TABLE RESULTS (
+    ResultId INT IDENTITY(1,1) PRIMARY KEY,
+    EnrolmentId INT UNIQUE FOREIGN KEY REFERENCES EVENTENROLMENTS(EnrolmentId),
+    TimeTaken TIME,
+    OverallPosition INT,
+    CategoryPosition INT,
+    DateRecorded DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- INSERTS
+INSERT INTO USERS VALUES ('john@organiser.com','hashed_pwd1','John','Doe','Organiser',GETDATE(),NULL),('sarah@runner.com','hashed_pwd2','Sarah','Smith','Participant',GETDATE(),NULL),('mike@runner.com','hashed_pwd3','Mike','Brown','Participant',GETDATE(),NULL);
+INSERT INTO ORGANISERS VALUES (1,'Elite Running Co.','0821234567');
+INSERT INTO PARTICIPANTS VALUES (2,'1998-05-12','Female','0827654321'),(3,'1995-11-20','Male','0821112233');
+INSERT INTO EVENTS VALUES (1,'Pretoria City Marathon 2026','Annual city marathon','2026-10-15 06:00:00','Pretoria','Upcoming',GETDATE());
+INSERT INTO CATEGORIES VALUES (1,'5km','Open','None',200,150.00),(1,'10km','Open','None',200,250.00),(1,'Half-Marathon','18-40','None',100,400.00);
+INSERT INTO EVENTENROLMENTS VALUES (1,1,2,GETDATE(),'Confirmed','Paid'),(1,2,3,GETDATE(),'Registered','Pending');
+INSERT INTO RESULTS VALUES (1,'00:55:23',12,5,GETDATE());
+GO
+
+-- OUTPUT IN TABLES
+SELECT * FROM USERS;
+SELECT * FROM ORGANISERS;
+SELECT * FROM PARTICIPANTS;
+SELECT * FROM EVENTS;
+SELECT * FROM CATEGORIES;
+SELECT * FROM EVENTENROLMENTS;
+SELECT * FROM RESULTS;
